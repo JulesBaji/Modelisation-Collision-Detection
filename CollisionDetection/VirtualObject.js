@@ -150,11 +150,26 @@ VirtualObject.prototype.computeAABB=function()
 
   let positions=this.globject.positions;
   let pos=vec3.create();
+
+  // mat4.multiplyVec3(posmatrix,positions[0],pos);
+  // this.boxmin[0]=this.boxmax[0]=pos[0];
+  // this.boxmin[1]=this.boxmax[1]=pos[1];
+  // this.boxmin[2]=this.boxmax[2]=pos[2];
+
+  this.boxmin[0]=this.boxmin[1]=this.boxmin[2]=Number.MAX_VALUE;
+  this.boxmax[0]=this.boxmax[1]=this.boxmax[2]=-Number.MAX_VALUE;
+
   for(let i=0;i<positions.length;i++)
   {
     mat4.multiplyVec3(posmatrix,positions[i],pos);
+
     // update bounding box using "pos" here...
-    // TO COMPLETE
+    if(pos[0]<this.boxmin[0]) this.boxmin[0]=pos[0];
+    if(pos[1]<this.boxmin[1]) this.boxmin[1]=pos[1];
+    if(pos[2]<this.boxmin[2]) this.boxmin[2]=pos[2];
+    if(pos[0]>this.boxmax[0]) this.boxmax[0]=pos[0];
+    if(pos[1]>this.boxmax[1]) this.boxmax[1]=pos[1];
+    if(pos[2]>this.boxmax[2]) this.boxmax[2]=pos[2];
   }
 }
 
@@ -166,6 +181,9 @@ VirtualObject.prototype.computeAABB=function()
 VirtualObject.prototype.compareAABB=function(that)
 {
   // return true if AABB of this and that intersect
-  // to COMPLETE
+  if(this.boxmin[0]>that.boxmax[0] || this.boxmax[0]<that.boxmin[0]) return false;
+  if(this.boxmin[1]>that.boxmax[1] || this.boxmax[1]<that.boxmin[1]) return false;
+  if(this.boxmin[2]>that.boxmax[2] || this.boxmax[2]<that.boxmin[2]) return false;
+  return true;
 }
 

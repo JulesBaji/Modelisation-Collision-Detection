@@ -51,7 +51,17 @@ Simulation.prototype.step = function (elapsed)
     this.objects[i].step(elapsed); // Move each polyhedron
   }
   // Detect collision between polyhedra here...
-  // TO COMPLETE !!!
+  for(let i=0;i<this.objects.length-1;i++)
+  {
+    for(let j=i+1;j<this.objects.length;j++)
+    {
+      if(this.objects[i].compareAABB(this.objects[j]))
+      {
+        this.objects[i].collision=true;
+        this.objects[j].collision=true;
+      }
+    }
+  }
   
   
   
@@ -103,13 +113,13 @@ Simulation.prototype.draw = function()
     mvmatrix=popMatrix();
 
     // Uncomment following lines to display bounding boxes    
-/*    setLighting(false);
+    setLighting(false);
     pushMatrix(mvmatrix);
     {
       obj.drawAABB(mvmatrix,this.box);
     }
     mvmatrix=popMatrix();
-    setLighting(true); */
+    setLighting(true);
     
   }
 }
