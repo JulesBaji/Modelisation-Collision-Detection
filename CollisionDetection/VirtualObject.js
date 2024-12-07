@@ -151,11 +151,6 @@ VirtualObject.prototype.computeAABB=function()
   let positions=this.globject.positions;
   let pos=vec3.create();
 
-  // mat4.multiplyVec3(posmatrix,positions[0],pos);
-  // this.boxmin[0]=this.boxmax[0]=pos[0];
-  // this.boxmin[1]=this.boxmax[1]=pos[1];
-  // this.boxmin[2]=this.boxmax[2]=pos[2];
-
   this.boxmin[0]=this.boxmin[1]=this.boxmin[2]=Number.MAX_VALUE;
   this.boxmax[0]=this.boxmax[1]=this.boxmax[2]=-Number.MAX_VALUE;
 
