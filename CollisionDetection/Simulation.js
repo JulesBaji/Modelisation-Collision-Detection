@@ -66,23 +66,37 @@ Simulation.prototype.step = function (elapsed)
   this.bubbleSort(this.sorted_y, 1); 
   this.bubbleSort(this.sorted_z, 2); 
 
-  // Détection de collision entre les polyèdres
+  // Matrices de chevauchement
   let overlap_x = this.checkOverlaps(this.sorted_x, 0);
   let overlap_y = this.checkOverlaps(this.sorted_y, 1);
-  let overlap_z = this.checkOverlaps(this.sorted_z, 2);
+  
+  for (let i = 0; i < this.objects.length - 1; i++) 
+  {
+    const idxI = this.sorted_z[i];
+    const objI = this.objects[idxI];
+    for (let j = i + 1; j < this.objects.length; j++) 
+    {    
+      const idxJ = this.sorted_z[j];
+      const objJ = this.objects[idxJ];
 
-  // Utilisation des matrices pour vérifier les chevauchements sur tous les axes
-  for (let i = 0; i < this.objects.length - 1; i++) {
-    for (let j = i + 1; j < this.objects.length; j++) {
-      if (overlap_x[i][j] && overlap_y[i][j] && overlap_z[i][j]) {
-        this.objects[i].collision = true;
-        this.objects[j].collision = true;
-      }
+      if (objI.boxmax[2] > objJ.boxmin[2]) 
+      {
+        if (idxI < idxJ && overlap_x[idxI][idxJ] && overlap_y[idxI][idxJ])
+        {
+          this.objects[idxI].collision = true;
+          this.objects[idxJ].collision = true;
+        }
+        else if (overlap_x[idxJ][idxI] && overlap_y[idxJ][idxI])
+        {
+          this.objects[idxI].collision = true;
+          this.objects[idxJ].collision = true;
+        }
+      } else break;
     }
   }
-
-//  this.rotview += elapsed*1e-1;
-        // modify view angle by the way of a rotation velocity in rad/s
+  
+  // modify view angle by the way of a rotation velocity in rad/s
+  //  this.rotview += elapsed*1e-1;
 }
   
 /*
@@ -136,16 +150,14 @@ Simulation.prototype.draw = function()
     }
     mvmatrix=popMatrix();
     setLighting(true);
-    
   }
 }
 
 Simulation.prototype.bubbleSort = function (array, axis) {
   let swapped;
   let n = array.length;
-  // Fonction pour accéder aux objets de la liste triée
+  // Fonction d'accès aux objets de la liste triée
   const objects = (i) => this.objects[array[i]];
-
   do {
     swapped = false;
     for (let i = 0; i < n - 1; i++) {
@@ -156,37 +168,30 @@ Simulation.prototype.bubbleSort = function (array, axis) {
     }
     n--;
   } while (swapped);
-
-  //Vérification du tri
-  for (let i = 0; i < array.length - 1; i++) {
-    if (objects(i).boxmin[axis] > objects(i + 1).boxmin[axis]) {
-      console.error("Sorting error");
-    }
-  }
 }
 
-// Fonction pour vérifier les chevauchements entre les objets sur un axe donné
 Simulation.prototype.checkOverlaps = function (sortedList, axis) {
   const n = sortedList.length;
   // Matrice triangulaire supérieure
   let overlapMatrix = Array.from(Array(n), () => Array(n).fill(false)); 
-
+  
   for (let i = 0; i < n - 1; i++) {
-    const objI = this.objects[sortedList[i]];
-    for (let j = i + 1; j < n; j++) {    
-      const objJ = this.objects[sortedList[j]];
+    const idxI = sortedList[i];
+    const objI = this.objects[idxI];
+    for (let j = i + 1; j < n; j++) {  
+      const idxJ = sortedList[j];  
+      const objJ = this.objects[idxJ];
 
       if (objI.boxmax[axis] > objJ.boxmin[axis]) {
-        if (sortedList[i] < sortedList[j])
-          overlapMatrix[sortedList[i]][sortedList[j]] = true; // Les boîtes i et j se chevauchent sur cet axe
+        if (idxI < idxJ)
+          overlapMatrix[idxI][idxJ] = true;
         else
-          overlapMatrix[sortedList[j]][sortedList[i]] = true; // Les boîtes i et j se chevauchent sur cet axe
+          overlapMatrix[idxJ][idxI] = true;
       } else {
         break;
       }
     }
   }
-
   return overlapMatrix;
 }
 
