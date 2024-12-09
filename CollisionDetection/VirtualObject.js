@@ -182,3 +182,71 @@ VirtualObject.prototype.compareAABB=function(that)
   return true;
 }
 
+VirtualObject.prototype.buildTriangleTree = function (_globject) {
+  const positions = _globject.positions; // Les sommets (vec3)
+  const triangles = _globject.triangles; // Les indices des sommets formant les triangles
+
+  // Convertir les indices en triangles définis par leurs sommets (vec3)
+  let triangleVertices = [];
+  for (let i = 0; i < triangles.length; i += 3) {
+    let p0 = positions[triangles[i]];
+    let p1 = positions[triangles[i + 1]];
+    let p2 = positions[triangles[i + 2]];
+    triangleVertices.push([p0, p1, p2]);
+  }
+
+  // Appel à la fonction principale pour construire l'arbre
+  function computeTriangleCenter(triangle) {
+    let center = vec3.create();
+    vec3.add(triangle[0], triangle[1], center);
+    vec3.add(center, triangle[2], center);
+    vec3.scale(center, 1 / 3);
+    return center;
+  }
+
+  function buildTree(triangles) {
+    if (triangles.length === 1) {
+      return { triangles, left: null, right: null };
+    }
+
+    // Calculer les centres des triangles et les associer à leurs indices
+    let centersWithIndex = triangles.map((triangle, index) => {
+      return { center: computeTriangleCenter(triangle), index: index };
+    });
+
+    // Calculer la boîte englobante et la médiane
+    let boxMin = vec3.fromValues(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
+    let boxMax = vec3.fromValues(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE);
+    centers.forEach(center => {
+      vec3.min(boxMin, center);
+      vec3.max(boxMax, center);
+    });
+
+    let axisLengths = vec3.subtract(vec3.create(), boxMax, boxMin);
+    let dominantAxis = axisLengths.indexOf(Math.max(...axisLengths));
+    // Plus couteux que QuickSelect ?
+    centersWithIndex.sort((a, b) => a.center[dominantAxis] - b.center[dominantAxis]);
+    let medianIndex = Math.floor(centers.length / 2);
+    let medianValue = centers[medianIndex][dominantAxis];
+
+    // Diviser les triangles en fonction de la médiane
+    let leftTriangles = [];
+    let rightTriangles = [];
+    centersWithIndex.forEach(item => {
+      if (item.center[dominantAxis] <= medianValue) {
+        leftTriangles.push(triangleVertices[item.index]);
+      } else {
+        rightTriangles.push(triangleVertices[item.index]);
+      }
+    });
+
+    // Récursion
+    return {
+      triangles: null,
+      left: buildTree(leftTriangles),
+      right: buildTree(rightTriangles),
+    };
+  }
+
+  return buildTree(triangleVertices);
+};
