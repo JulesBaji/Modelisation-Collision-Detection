@@ -1,4 +1,4 @@
-function TreeNode(triangles, boxmin, boxmax, left = null, right = null) 
+function TreeNode(triangles, left = null, right = null, boxmin = null, boxmax = null) 
 {
     this.triangles = triangles; 
     this.boxmin = boxmin;       
@@ -14,25 +14,6 @@ TreeNode.prototype.buildTriangleTree = function (virtualObject)
     const posmatrix = mat4.create();
     mat4.identity(posmatrix);
     virtualObject.applyTranformations(posmatrix);
-
-    function computeAABB(triangleIndices) 
-    {
-        let boxmin = vec3.create();
-        let boxmax = vec3.create();
-        boxmin[0] = boxmin[1] = boxmin[2] = Number.MAX_VALUE;
-        boxmax[0] = boxmax[1] = boxmax[2] = -Number.MAX_VALUE;
-        let pos=vec3.create();
-    
-        triangleIndices.forEach(indices => {
-            [positions[indices[0]], positions[indices[1]], positions[indices[2]]].forEach(vertex => {
-                mat4.multiplyVec3(posmatrix,vertex,pos);
-                vec3.min(boxmin, pos);
-                vec3.max(boxmax, pos);
-            });
-        });
-
-        return { boxmin, boxmax };
-    }
     
     function computeTriangleCenter(indices) 
     {
@@ -45,42 +26,43 @@ TreeNode.prototype.buildTriangleTree = function (virtualObject)
 
     function buildTree(triangleIndices) 
     {
-        if (triangleIndices.length === 1) {
-            const { boxmin, boxmax } = computeAABB(triangleIndices);
-            return new TreeNode(triangleIndices, boxmin, boxmax);
-        }
-        
-        // Trouver un moyen de calculer la mediane sans les boxmin et boxmax
-        const { boxmin, boxmax } = computeAABB(triangleIndices);
+        if (triangleIndices.length === 1) return new TreeNode(triangleIndices);
 
-        let centersWithIndex = triangleIndices.map(indices => ({
-            center: computeTriangleCenter(indices),
-            indices
-        }));
+        let axisBounds = { 
+            x: [Number.MAX_VALUE, -Number.MAX_VALUE], 
+            y: [Number.MAX_VALUE, -Number.MAX_VALUE], 
+            z: [Number.MAX_VALUE, -Number.MAX_VALUE] 
+        };
+        triangleIndices.forEach(indices => {
+            const center = computeTriangleCenter(indices);
+            axisBounds.x[0] = Math.min(axisBounds.x[0], center[0]);
+            axisBounds.x[1] = Math.max(axisBounds.x[1], center[0]);
+            axisBounds.y[0] = Math.min(axisBounds.y[0], center[1]);
+            axisBounds.y[1] = Math.max(axisBounds.y[1], center[1]);
+            axisBounds.z[0] = Math.min(axisBounds.z[0], center[2]);
+            axisBounds.z[1] = Math.max(axisBounds.z[1], center[2]);
+        });
 
-        let axisLengths = vec3.subtract(vec3.create(), boxmax, boxmin);
-        let dominantAxis = axisLengths.indexOf(Math.max(...axisLengths));
+        let dominantAxis = ['x', 'y', 'z'].reduce((dominant, axis) => {
+            const length = axisBounds[axis][1] - axisBounds[axis][0];
+            const dominantLength = axisBounds[dominant][1] - axisBounds[dominant][0];
+            return length > dominantLength ? axis : dominant;
+        }, 'x');
 
-        centersWithIndex.sort((a, b) => a.center[dominantAxis] - b.center[dominantAxis]);
+        triangleIndices.sort((a, b) => {
+            const centerA = computeTriangleCenter(a);
+            const centerB = computeTriangleCenter(b);
+            return centerA[dominantAxis] - centerB[dominantAxis];
+        });
 
-        let medianIndex = Math.floor(centersWithIndex.length / 2);
-        let leftTriangles = centersWithIndex.slice(0, medianIndex).map(item => item.indices);
-        let rightTriangles = centersWithIndex.slice(medianIndex).map(item => item.indices);
+        let medianIndex = Math.floor(triangleIndices.length / 2);
+        let leftTriangles = triangleIndices.slice(0, medianIndex);
+        let rightTriangles = triangleIndices.slice(medianIndex);
 
         let leftNode = buildTree(leftTriangles);
         let rightNode = buildTree(rightTriangles);
 
-        // let combinedBoxMin = vec3.create();
-        // let combinedBoxMax = vec3.create();
-        // vec3.min(leftNode.boxmin, rightNode.boxmin, combinedBoxMin);
-        // vec3.max(leftNode.boxmax, rightNode.boxmax, combinedBoxMax);
-
-        // return new TreeNode(null, combinedBoxMin, combinedBoxMax, leftNode, rightNode);
-        return new TreeNode(null, boxmin, boxmax, leftNode, rightNode);
-    }
-
-    if (triangles.length % 3 !== 0) {
-        throw new Error("Invalid triangle data: number of indices must be a multiple of 3.");
+        return new TreeNode(null, leftNode, rightNode);
     }
 
     let triangleGroups = [];
@@ -95,7 +77,6 @@ TreeNode.prototype.buildTriangleTree = function (virtualObject)
 TreeNode.prototype.updateAABBs = function (virtualObject)
 {
     positions = virtualObject.globject.positions;
-    triangles = virtualObject.globject.triangles;
     const posmatrix = mat4.create();
     mat4.identity(posmatrix);
     virtualObject.applyTranformations(posmatrix);
@@ -109,23 +90,25 @@ TreeNode.prototype.updateAABBs = function (virtualObject)
         let pos=vec3.create();
     
         triangleIndices.forEach(indices => {
-            [positions[indices[0]], positions[indices[1]], positions[indices[2]]].forEach(vertex => {
-                mat4.multiplyVec3(posmatrix,vertex,pos);
+            indices.forEach(index => {
+                mat4.multiplyVec3(posmatrix, positions[index], pos);
                 vec3.min(boxmin, pos);
                 vec3.max(boxmax, pos);
             });
         });
-        return { boxmin, boxmax };
+
+        return { boxmin, boxmax };;
     }
 
     if (this.left === null && this.right === null) {
         const { boxmin, boxmax } = computeAABB(this.triangles);
         this.boxmin = boxmin;
         this.boxmax = boxmax;
-        console.log(this.boxmin, this.boxmax);
     } else {
         if (this.left) this.left.updateAABBs(virtualObject);
         if (this.right) this.right.updateAABBs(virtualObject);
+        if (!this.boxmin) this.boxmin = vec3.create();
+        if (!this.boxmax) this.boxmax = vec3.create();
         vec3.min(this.left.boxmin, this.right.boxmin, this.boxmin);
         vec3.max(this.left.boxmax, this.right.boxmax, this.boxmax);
     }
@@ -156,7 +139,6 @@ TreeNode.prototype.checkCollisions = function (otherNode, collisions) {
 };
 
 TreeNode.prototype.compareAABB = function (otherNode) {
-    // Retourne true si les AABB de this et otherNode se chevauchent
     return !(
         this.boxmin[0] > otherNode.boxmax[0] || this.boxmax[0] < otherNode.boxmin[0] || // Axe X
         this.boxmin[1] > otherNode.boxmax[1] || this.boxmax[1] < otherNode.boxmin[1] || // Axe Y

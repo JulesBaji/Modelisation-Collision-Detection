@@ -136,11 +136,8 @@ VirtualObject.prototype.step=function(elapsed)
   
   this.collision=false;
 
-  if (this.treeRoot) {
-    this.treeRoot.updateAABBs(this);
-  } else {
-      this.treeRoot = TreeNode.prototype.buildTriangleTree(this);
-  }
+  if (!this.treeRoot) this.treeRoot = TreeNode.prototype.buildTriangleTree(this);
+  this.treeRoot.updateAABBs(this);
   this.boxmin = this.treeRoot.boxmin;
   this.boxmax = this.treeRoot.boxmax;
 }
