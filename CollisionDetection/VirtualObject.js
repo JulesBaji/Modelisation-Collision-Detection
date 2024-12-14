@@ -135,8 +135,14 @@ VirtualObject.prototype.step=function(elapsed)
   this.posangle+=this.angularvelocity*elapsed;
   
   this.collision=false;
-  // A Modifier car rootbox of the tree = pareil que ca
-  this.computeAABB();
+
+  if (this.treeRoot) {
+    this.treeRoot.updateAABBs(this);
+  } else {
+      this.treeRoot = TreeNode.prototype.buildTriangleTree(this);
+  }
+  this.boxmin = this.treeRoot.boxmin;
+  this.boxmax = this.treeRoot.boxmax;
 }
 
 /**
@@ -166,9 +172,6 @@ VirtualObject.prototype.computeAABB=function()
     if(pos[0]>this.boxmax[0]) this.boxmax[0]=pos[0];
     if(pos[1]>this.boxmax[1]) this.boxmax[1]=pos[1];
     if(pos[2]>this.boxmax[2]) this.boxmax[2]=pos[2];
-
-    // vec3.min(this.boxmin,pos);
-    // vec3.max(this.boxmax,pos);
   }
 }
 
@@ -185,4 +188,6 @@ VirtualObject.prototype.compareAABB=function(that)
   if(this.boxmin[2]>that.boxmax[2] || this.boxmax[2]<that.boxmin[2]) return false;
   return true;
 }
+
+
 

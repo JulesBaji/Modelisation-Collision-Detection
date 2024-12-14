@@ -17,8 +17,10 @@ TreeNode.prototype.buildTriangleTree = function (virtualObject)
 
     function computeAABB(triangleIndices) 
     {
-        let boxmin = vec3.fromValues(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
-        let boxmax = vec3.fromValues(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE);
+        let boxmin = vec3.create();
+        let boxmax = vec3.create();
+        boxmin[0] = boxmin[1] = boxmin[2] = Number.MAX_VALUE;
+        boxmax[0] = boxmax[1] = boxmax[2] = -Number.MAX_VALUE;
         let pos=vec3.create();
     
         triangleIndices.forEach(indices => {
@@ -50,7 +52,7 @@ TreeNode.prototype.buildTriangleTree = function (virtualObject)
         
         // Trouver un moyen de calculer la mediane sans les boxmin et boxmax
         const { boxmin, boxmax } = computeAABB(triangleIndices);
-        
+
         let centersWithIndex = triangleIndices.map(indices => ({
             center: computeTriangleCenter(indices),
             indices
@@ -68,8 +70,10 @@ TreeNode.prototype.buildTriangleTree = function (virtualObject)
         let leftNode = buildTree(leftTriangles);
         let rightNode = buildTree(rightTriangles);
 
-        // let combinedBoxMin = vec3.min(vec3.create(), leftNode.boxmin, rightNode.boxmin);
-        // let combinedBoxMax = vec3.max(vec3.create(), leftNode.boxmax, rightNode.boxmax);
+        // let combinedBoxMin = vec3.create();
+        // let combinedBoxMax = vec3.create();
+        // vec3.min(leftNode.boxmin, rightNode.boxmin, combinedBoxMin);
+        // vec3.max(leftNode.boxmax, rightNode.boxmax, combinedBoxMax);
 
         // return new TreeNode(null, combinedBoxMin, combinedBoxMax, leftNode, rightNode);
         return new TreeNode(null, boxmin, boxmax, leftNode, rightNode);
@@ -88,16 +92,74 @@ TreeNode.prototype.buildTriangleTree = function (virtualObject)
     return buildTree(triangleGroups);
 };
 
-TreeNode.prototype.updateAABBs = function ()
+TreeNode.prototype.updateAABBs = function (virtualObject)
 {
+    positions = virtualObject.globject.positions;
+    triangles = virtualObject.globject.triangles;
+    const posmatrix = mat4.create();
+    mat4.identity(posmatrix);
+    virtualObject.applyTranformations(posmatrix);
+
+    function computeAABB(triangleIndices) 
+    {
+        let boxmin = vec3.create();
+        let boxmax = vec3.create();
+        boxmin[0] = boxmin[1] = boxmin[2] = Number.MAX_VALUE;
+        boxmax[0] = boxmax[1] = boxmax[2] = -Number.MAX_VALUE;
+        let pos=vec3.create();
+    
+        triangleIndices.forEach(indices => {
+            [positions[indices[0]], positions[indices[1]], positions[indices[2]]].forEach(vertex => {
+                mat4.multiplyVec3(posmatrix,vertex,pos);
+                vec3.min(boxmin, pos);
+                vec3.max(boxmax, pos);
+            });
+        });
+        return { boxmin, boxmax };
+    }
+
     if (this.left === null && this.right === null) {
         const { boxmin, boxmax } = computeAABB(this.triangles);
         this.boxmin = boxmin;
         this.boxmax = boxmax;
+        console.log(this.boxmin, this.boxmax);
     } else {
-        if (this.left) this.left.updateAABBs();
-        if (this.right) this.right.updateAABBs();
-        this.boxmin = vec3.min(vec3.create(), this.left.boxmin, this.right.boxmin);
-        this.boxmax = vec3.max(vec3.create(), this.left.boxmax, this.right.boxmax);
+        if (this.left) this.left.updateAABBs(virtualObject);
+        if (this.right) this.right.updateAABBs(virtualObject);
+        vec3.min(this.left.boxmin, this.right.boxmin, this.boxmin);
+        vec3.max(this.left.boxmax, this.right.boxmax, this.boxmax);
     }
+};
+
+TreeNode.prototype.checkCollisions = function (otherNode, collisions) {
+
+    function computeVolume(boxmin, boxmax) {
+        return (boxmax[0] - boxmin[0]) * (boxmax[1] - boxmin[1]) * (boxmax[2] - boxmin[2]);
+    }
+
+    if (!this.compareAABB(otherNode)) return;
+
+    if (!this.left && !this.right && !otherNode.left && !otherNode.right) {
+        collisions.push({ trianglesA: this.triangles, trianglesB: otherNode.triangles });
+    } else {
+        const volumeThis = computeVolume(this.boxmin, this.boxmax);
+        const volumeOther = computeVolume(otherNode.boxmin, otherNode.boxmax);
+
+        if (volumeThis > volumeOther) {
+        if (this.left) this.left.checkCollisions(otherNode, collisions);
+        if (this.right) this.right.checkCollisions(otherNode, collisions);
+        } else {
+        if (otherNode.left) this.checkCollisions(otherNode.left, collisions);
+        if (otherNode.right) this.checkCollisions(otherNode.right, collisions);
+        }
+    }
+};
+
+TreeNode.prototype.compareAABB = function (otherNode) {
+    // Retourne true si les AABB de this et otherNode se chevauchent
+    return !(
+        this.boxmin[0] > otherNode.boxmax[0] || this.boxmax[0] < otherNode.boxmin[0] || // Axe X
+        this.boxmin[1] > otherNode.boxmax[1] || this.boxmax[1] < otherNode.boxmin[1] || // Axe Y
+        this.boxmin[2] > otherNode.boxmax[2] || this.boxmax[2] < otherNode.boxmin[2]    // Axe Z
+    );
 };

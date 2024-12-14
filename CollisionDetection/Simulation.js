@@ -61,37 +61,56 @@ Simulation.prototype.step = function (elapsed)
     this.objects[i].step(elapsed); // Move each polyhedron
   }
 
-  // Réorganise les trois listes triées
-  this.bubbleSort(this.sorted_x, 0); 
-  this.bubbleSort(this.sorted_y, 1); 
-  this.bubbleSort(this.sorted_z, 2); 
+  // // Réorganise les trois listes triées
+  // this.bubbleSort(this.sorted_x, 0); 
+  // this.bubbleSort(this.sorted_y, 1); 
+  // this.bubbleSort(this.sorted_z, 2); 
 
-  // Matrices de chevauchement
-  let overlap_x = this.checkOverlaps(this.sorted_x, 0);
-  let overlap_y = this.checkOverlaps(this.sorted_y, 1);
+  // // Matrices de chevauchement
+  // let overlap_x = this.checkOverlaps(this.sorted_x, 0);
+  // let overlap_y = this.checkOverlaps(this.sorted_y, 1);
   
-  for (let i = 0; i < this.objects.length - 1; i++) 
-  {
-    const idxI = this.sorted_z[i];
-    const objI = this.objects[idxI];
-    for (let j = i + 1; j < this.objects.length; j++) 
-    {    
-      const idxJ = this.sorted_z[j];
-      const objJ = this.objects[idxJ];
+  // // Vérification des collisions
+  // for (let i = 0; i < this.objects.length - 1; i++) 
+  // {
+  //   const idxI = this.sorted_z[i];
+  //   const objI = this.objects[idxI];
+  //   for (let j = i + 1; j < this.objects.length; j++) 
+  //   {    
+  //     const idxJ = this.sorted_z[j];
+  //     const objJ = this.objects[idxJ];
 
-      if (objI.boxmax[2] > objJ.boxmin[2]) 
-      {
-        if (idxI < idxJ && overlap_x[idxI][idxJ] && overlap_y[idxI][idxJ])
-        {
-          this.objects[idxI].collision = true;
-          this.objects[idxJ].collision = true;
-        }
-        else if (overlap_x[idxJ][idxI] && overlap_y[idxJ][idxI])
-        {
-          this.objects[idxI].collision = true;
-          this.objects[idxJ].collision = true;
-        }
-      } else break;
+  //     if (objI.boxmax[2] > objJ.boxmin[2]) 
+  //     {
+  //       if (idxI < idxJ && overlap_x[idxI][idxJ] && overlap_y[idxI][idxJ])
+  //       {
+  //         this.objects[idxI].collision = true;
+  //         this.objects[idxJ].collision = true;
+  //       }
+  //       else if (overlap_x[idxJ][idxI] && overlap_y[idxJ][idxI])
+  //       {
+  //         this.objects[idxI].collision = true;
+  //         this.objects[idxJ].collision = true;
+  //       }
+  //     } else break;
+  //   }
+  // }
+
+  // Utiliser les AABBs racines pour détecter les collisions
+  for (let i = 0; i < this.objects.length - 1; i++) {
+    for (let j = i + 1; j < this.objects.length; j++) {
+      const objA = this.objects[i];
+      const objB = this.objects[j];
+
+      if (!objA.treeRoot.compareAABB(objB.treeRoot)) continue;
+
+      let collisions = [];
+      objA.treeRoot.checkCollisions(objB.treeRoot, collisions);
+
+      if (collisions.length > 0) {
+        objA.collision = true;
+        objB.collision = true;
+      }
     }
   }
   
