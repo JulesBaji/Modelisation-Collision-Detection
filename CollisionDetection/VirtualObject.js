@@ -44,6 +44,9 @@ function VirtualObject(_envi,_globject,_color,_size,_startangle,_radiusx,_radius
   this.boxmin=vec3.create();
   // Top/right/near corner of the axis-aligned bounding box
   this.boxmax=vec3.create();
+
+  // BVH Narrow Phase
+  this.treeRoot = null;
 }
 
 /**
@@ -136,7 +139,9 @@ VirtualObject.prototype.step=function(elapsed)
   
   this.collision=false;
 
-  if (!this.treeRoot) this.treeRoot = TreeNode.prototype.buildTriangleTree(this);
+  // Initialisation du BVH sans AABBs
+  if (!this.treeRoot) this.treeRoot = TreeNode.prototype.buildTriangleTree(this.globject);
+  // Les AABBs sont initialisées ou mises à jour ici 
   this.treeRoot.updateAABBs(this);
   this.boxmin = this.treeRoot.boxmin;
   this.boxmax = this.treeRoot.boxmax;

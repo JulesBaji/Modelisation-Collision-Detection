@@ -61,16 +61,14 @@ Simulation.prototype.step = function (elapsed)
     this.objects[i].step(elapsed); // Move each polyhedron
   }
 
-  // Réorganise les trois listes triées
+  // Broad phase
   this.bubbleSort(this.sorted_x, 0); 
   this.bubbleSort(this.sorted_y, 1); 
   this.bubbleSort(this.sorted_z, 2); 
 
-  // Matrices de chevauchement
   let overlap_x = this.checkOverlaps(this.sorted_x, 0);
   let overlap_y = this.checkOverlaps(this.sorted_y, 1);
   
-  // Vérification des collisions
   for (let i = 0; i < this.objects.length - 1; i++) 
   {
     const idxI = this.sorted_z[i];
@@ -82,9 +80,9 @@ Simulation.prototype.step = function (elapsed)
 
       if (objI.boxmax[2] > objJ.boxmin[2]) 
       {
-        if ((idxI < idxJ && overlap_x[idxI][idxJ] && overlap_y[idxI][idxJ]) || overlap_x[idxJ][idxI] && overlap_y[idxJ][idxI])
+        if ((idxI < idxJ && overlap_x[idxI][idxJ] && overlap_y[idxI][idxJ]) || (overlap_x[idxJ][idxI] && overlap_y[idxJ][idxI]))
         {
-          if (!objI.treeRoot.compareAABB(objJ.treeRoot)) continue;
+          // Narrow phase
           let collisions = [];
           objI.treeRoot.checkCollisions(objJ.treeRoot, collisions);
 
@@ -159,8 +157,8 @@ Simulation.prototype.draw = function()
 Simulation.prototype.bubbleSort = function (array, axis) {
   let swapped;
   let n = array.length;
-  // Fonction d'accès aux objets de la liste triée
   const objects = (i) => this.objects[array[i]];
+
   do {
     swapped = false;
     for (let i = 0; i < n - 1; i++) {
