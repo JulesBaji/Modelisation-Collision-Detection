@@ -98,9 +98,8 @@ TreeNode.prototype.checkCollisions = function (otherNode, collisions) {
 
     if (!this.compareAABB(otherNode)) return;
 
-    // Si les deux nœuds sont des feuilles (contenant des triangles), on vérifie la collision exacte avec Möller
+    // Exact collision detection
     if (!this.left && !this.right && !otherNode.left && !otherNode.right) {
-        // On parcourt chaque paire de triangles et on applique Möller pour chaque paire
         for (let triangleA of this.triangles) {
             for (let triangleB of otherNode.triangles) {
                 if (mollerCollision(triangleA, triangleB)) {
