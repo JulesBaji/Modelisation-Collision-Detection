@@ -5,7 +5,7 @@ Projet de modélisation du master Informatique ISICG (Université de Limoges, 20
 Des objets 3D se déplacent dans une scène et la simulation détecte leurs collisions en deux phases :
 
 - **Broad phase** : Sweep and Prune sur les boîtes englobantes des objets, pour ne garder que les paires d'objets proches.
-- **Narrow phase** : une **BVH** par objet (découpage à la médiane sur l'axe le plus étendu), mise à jour avec les transformations de l'objet, puis test d'intersection triangle-triangle de Möller sur les feuilles qui se chevauchent. Le test de Möller reprend une implémentation existante.
+- **Narrow phase** : une **BVH** par objet (découpage à la médiane sur l'axe le plus étendu), mise à jour avec les transformations de l'objet, puis test d'intersection triangle-triangle de Möller sur les feuilles qui se chevauchent.
 
 Le projet part d'un squelette fourni par l'université (rendu WebGL, shaders de Blinn-Phong, polyèdres).
 
