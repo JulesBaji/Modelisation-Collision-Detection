@@ -2,6 +2,10 @@
 
 Projet de modélisation du master Informatique ISICG (Université de Limoges, 2024), en JavaScript et WebGL.
 
+![Simulation : les objets en collision passent en rouge](docs/collisions.gif)
+
+*Démo avec 15 objets (5 par défaut dans `main.js`) : un objet devient rouge quand une collision est détectée.*
+
 Des objets 3D se déplacent dans une scène et la simulation détecte leurs collisions en deux phases :
 
 - **Broad phase** : Sweep and Prune sur les boîtes englobantes des objets, pour ne garder que les paires d'objets proches.
